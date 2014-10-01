@@ -16,7 +16,7 @@ namespace SQL;
 trait StringFuncs {
     public function startWith($string,$char,$offset=0)
     {
-        return $string ==="" || strpos($string, $char,$offset) === 0;
+        return $string ==="" || strpos($string, $char,$offset) === $offset;
     }
 
     public function endWith($string,$char)
