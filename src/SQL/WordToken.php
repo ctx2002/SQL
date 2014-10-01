@@ -22,7 +22,7 @@ class WordToken implements \SQL\Token {
                     return false;
 
             $candidate = substr($offset, $offset + strlen($this->pattern));
-           if ( !strncasecmp($candidate, $this->pattern) ) {
+           if ( !strncasecmp($candidate, $this->pattern,strlen($this->pattern)) ) {
                return false;
            }
            // Return true if the lexeme is at the end of the
