@@ -25,9 +25,20 @@ class WordToken implements \SQL\Token {
            if ( !strncasecmp($candidate, $this->pattern) ) {
                return false;
            }
-
+           // Return true if the lexeme is at the end of the
+            // input string or if the character following the
+            // lexeme is not a letter or digit.
+            //
+            //if the lexeme is at the end of the
+            // input string
            $v =  ( (strlen($input) - $offset ) == strlen($this->pattern) );
-           $char = $input[ $offset + strlen($this->pattern) ];
+
+            // OR if the character following the
+            // lexeme is not a letter or digit
+           $char = "";
+           if (isset($input[ $offset + strlen($this->pattern) ])) {
+               $char = $input[ $offset + strlen($this->pattern) ];
+           }
            $t = !(ctype_alpha($char) || ctype_digit($char));
            return $v || $t;
             // Return true if the lexeme is at the end of the
