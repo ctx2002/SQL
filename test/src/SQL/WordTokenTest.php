@@ -35,7 +35,24 @@ class WordTokenTest extends \PHPUnit_Framework_TestCase
     public function testMatch()
     {
         $this->object = new WordToken("AND");
-        
+        $r = $this->object->match("AND", 0);
+        $this->assertTrue($r);
+
+        $this->object = new WordToken("AND");
+        $r = $this->object->match("AND", 1);
+        $this->assertFalse($r);
+
+        $this->object = new WordToken("AND");
+        $r = $this->object->match(",AND", 1);
+        $this->assertTrue($r);
+
+        $this->object = new WordToken("AND");
+        $r = $this->object->match(",AND,", 1);
+        $this->assertTrue($r);
+
+        $this->object = new WordToken("AND");
+        $r = $this->object->match(",ANDL", 1);
+        $this->assertFalse($r);
     }
 
     /**
@@ -44,10 +61,8 @@ class WordTokenTest extends \PHPUnit_Framework_TestCase
      */
     public function testLexeme()
     {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-            'This test has not been implemented yet.'
-        );
+        $this->object = new WordToken("AND");
+        $this->assertEquals("AND", $this->object->lexeme());
     }
 
     /**
@@ -56,9 +71,8 @@ class WordTokenTest extends \PHPUnit_Framework_TestCase
      */
     public function test__toString()
     {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-            'This test has not been implemented yet.'
-        );
+        $this->object = new WordToken("FROM");
+        $str = $this->object->__toString();
+        $this->assertEquals("FROM", $str);
     }
 }
