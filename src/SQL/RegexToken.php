@@ -18,8 +18,14 @@ class RegexToken implements \SQL\Token {
     public function lexeme()
     {
         $p = "%^".$this->pattern."%ism";
-        preg_match_all($p,$this->sub,$m);
-        return $m;
+        if ( preg_match($p,$this->sub,$m) ) {
+            return $m[0];
+        } else {
+            return null;
+        }
+        /**
+            this function should return a string
+         *          */
     }
     public function __toString() { return $this->pattern; }
 }
