@@ -23,9 +23,6 @@ class RegexToken implements \SQL\Token {
         } else {
             return null;
         }
-        /**
-            this function should return a string
-         *          */
     }
     public function __toString() { return $this->pattern; }
 }
