@@ -1,7 +1,7 @@
 <?php
 namespace SQL;
 
-class TokenSet {
+class TokenSet implements IteratorAggregate {
     private $members = null;
 
     public function __construct()
@@ -51,9 +51,9 @@ class TokenSet {
         return  $r;
     }
 
-    public  function iterator()
+    public  function getIterator()
     {
-        return members.getIterator();
+        return $this->members->getIterator();
     }
 
     private function startWith($string,$char)
