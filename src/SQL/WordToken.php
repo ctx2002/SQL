@@ -6,7 +6,7 @@ class WordToken implements \SQL\Token {
 
    public function __construct($pattern)
    {
-       $this->pattern =$pattern;
+       $this->pattern =  strtolower($pattern);
    }
 
    public function match($input, $offset)
@@ -21,8 +21,9 @@ class WordToken implements \SQL\Token {
             if( (strlen($input) - $offset) < strlen($this->pattern) )
                     return false;
 
-            $candidate = substr($offset, $offset + strlen($this->pattern));
-           if ( !strncasecmp($candidate, $this->pattern,strlen($this->pattern)) ) {
+            $candidate = substr($input,$offset, $offset + strlen($this->pattern));
+            
+           if ( strncasecmp($candidate, $this->pattern,strlen($this->pattern)) !== 0 ) {
                return false;
            }
            // Return true if the lexeme is at the end of the

@@ -1,7 +1,7 @@
 <?php
 namespace SQL;
 
-class TokenSet implements IteratorAggregate {
+class TokenSet implements \IteratorAggregate {
     private $members = null;
 
     public function __construct()
@@ -35,9 +35,9 @@ class TokenSet implements IteratorAggregate {
         $charArray = array(",","(",")",".","*","/","=");
         $token = null;
         if (in_array($spec[$end - 1], $charArray)) {
-            $token = new SimpleToken( substr($spec,$start,-1));
+            $token = new SimpleToken( substr($spec,$start,$end));
         } else {
-            $token = new WordToken( substr($spec,$start,-1));
+            $token = new WordToken( substr($spec,$start,$end));
         }
         $this->members->append($token);
         return $token;

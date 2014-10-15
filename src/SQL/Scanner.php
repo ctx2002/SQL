@@ -14,11 +14,12 @@ namespace SQL;
  * @author anru
  */
 class Scanner {
-    private $currentToken	= null;
+    public $currentToken	= null;
     private $inputReader 	= null;
     private $inputLineNumber = 0;
     private $inputLine     	= "";
-    private $inputPosition 	= 0;
+    public $inputPosition 	= 0;
+    private $index = 0;
 
     private $currentStartPosition = 0;
 
@@ -30,75 +31,107 @@ class Scanner {
     public function __construct( TokenSet $tokens, $input )
     {
         $this->currentToken = new BeginToken();
-        $this->init( tokens, $input);
+        $this->init( $tokens, $input);
     }
 
     public function init( TokenSet $tokens, $inputReader )
     {
-        $this->tokens 	 = tokens;
+        $this->tokens 	 = $tokens;
         $this->inputReader = $inputReader;
-        loadLine();
+        $this->loadLine();
     }
 
     private function loadLine()
     {
-        $index = 0;
+        //$index = 0;
         while(1) {
-            if (isset($this->inputReader[$index])) {
-                if ($this->inputReader[$index] == "\n") {
+            if (isset($this->inputReader[$this->index])) {
+                if ($this->inputReader[$this->index] == "\n") {
+                    $this->index += 1;
                     break;
                 }
+            } else {
+                break;
             }
             //$this->inputReader[$index] != "\n" && $this->inputReader[$index] != "\r"
-            $index += 1;
+            $this->index += 1;
         }
-
-        $this->inputLine = substr($this->inputReader,$this->currentStartPosition,$index);
-
+        
+        $this->inputLine = substr($this->inputReader,$this->currentStartPosition,$this->index);
+        $this->inputLine = trim($this->inputLine);
+        //var_dump($this->inputLine);
         if ($this->inputLine) {
             $this->inputPosition = 0;
             $this->inputLineNumber += 1;
             $this->currentStartPosition += strlen($this->inputLine);
         }
-
-        return empty( $this->inputLine );
+        
+        $b = !empty( $this->inputLine );
+        return $b;
     }
 
     public function advance()
     {
+        //var_dump($this->currentToken);
         if (!is_null( $this->currentToken)) {
-                $this->inputPosition += strlen( $this->currentToken.lexeme());
+                $this->inputPosition += strlen( $this->currentToken->lexeme());
+                
                 $this->currentToken   = null;
-
-                if( $this->inputPosition == substr( $this->inputLine) ) {
-                        if( !$this->loadLine() ) {
-                                return null;
-                        }
+                
+                if( $this->inputPosition == strlen( $this->inputLine) ) {
+                    
+                    if( !$this->loadLine() ) {
+                        return null;
+                    }
                 }
 
                 if (isset($this->inputLine[$this->inputPosition])) {
                     while(ctype_space($this->inputLine[$this->inputPosition] )) {
-                        if( ++$this->inputPosition == substr( $this->inputLine) ) {
-                            if( !loadLine() ) {
-		return null;
+                        if( ++$this->inputPosition == strlen( $this->inputLine) ) {
+                            if( !$this->loadLine() ) {
+                                return null;
                             }
                         }
                     }
                 }
-
+                //var_dump($this->inputLine);
                 foreach($this->tokens as $token) {
+                    
                     if ($token->match($this->inputLine,$this->inputPosition)) {
+                        //var_dump($this->inputLine, $token);
                         $this->currentToken = $token;
                         break;
                     }
                 }
-
+                
                 if( is_null( $this->currentToken ) ) {
-	    throw new \Exception("Unrecognized Input");
+                    throw new \Exception("Unrecognized Input");
                 }
         }
-
+        
         return $this->currentToken;
+    }
+    
+
+    public function matchAdvance( Token $candidate )
+    {	
+        if( $this->match($candidate) )
+        {	
+            $lexeme = $this->currentToken->lexeme();
+            $this->advance();
+            return $lexeme;
+        }
+            return null;
+    }
+
+  
+    public function required( Token $candidate )
+    {	$lexeme =	$this->matchAdvance($candidate);
+            if( $lexeme == null ) {
+                    throw new Exception(
+                                    "\"" . $this->candidate->__toString() . "\" expected.");
+            }
+            return lexeme;
     }
 
     public function match( Token $candidate )
