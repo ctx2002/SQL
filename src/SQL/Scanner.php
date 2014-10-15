@@ -14,11 +14,11 @@ namespace SQL;
  * @author anru
  */
 class Scanner {
-    public $currentToken	= null;
+    private $currentToken	= null;
     private $inputReader 	= null;
     private $inputLineNumber = 0;
     private $inputLine     	= "";
-    public $inputPosition 	= 0;
+    private $inputPosition 	= 0;
     private $index = 0;
 
     private $currentStartPosition = 0;
