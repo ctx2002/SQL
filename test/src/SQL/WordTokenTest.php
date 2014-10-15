@@ -60,7 +60,7 @@ class WordTokenTest extends \PHPUnit_Framework_TestCase {
      */
     public function testLexeme() {
         $this->object = new WordToken("AND");
-        $this->assertEquals("AND", $this->object->lexeme());
+        $this->assertEquals("AND", strtoupper( $this->object->lexeme()) );
     }
 
     /**
@@ -70,7 +70,7 @@ class WordTokenTest extends \PHPUnit_Framework_TestCase {
     public function test__toString() {
         $this->object = new WordToken("FROM");
         $str = $this->object->__toString();
-        $this->assertEquals("FROM", $str);
+        $this->assertEquals("FROM", strtoupper( $str) );
     }
 
 }

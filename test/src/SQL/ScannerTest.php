@@ -52,7 +52,7 @@ class ScannerTest extends \PHPUnit_Framework_TestCase {
         $analyzer->advance();
         $analyzer->advance();
        
-        $this->setExpectedException('Exception');
+        $this->setExpectedException('Exception','Unrecognized Input');
         $analyzer->advance();
         
     }
