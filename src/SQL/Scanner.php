@@ -56,7 +56,7 @@ class Scanner {
             //$this->inputReader[$index] != "\n" && $this->inputReader[$index] != "\r"
             $this->index += 1;
         }
-        
+
         $this->inputLine = substr($this->inputReader,$this->currentStartPosition,$this->index);
         $this->inputLine = trim($this->inputLine);
         //var_dump($this->inputLine);
@@ -65,7 +65,7 @@ class Scanner {
             $this->inputLineNumber += 1;
             $this->currentStartPosition += strlen($this->inputLine);
         }
-        
+
         $b = !empty( $this->inputLine );
         return $b;
     }
@@ -75,11 +75,11 @@ class Scanner {
         //var_dump($this->currentToken);
         if (!is_null( $this->currentToken)) {
                 $this->inputPosition += strlen( $this->currentToken->lexeme());
-                
+
                 $this->currentToken   = null;
-                
+
                 if( $this->inputPosition == strlen( $this->inputLine) ) {
-                    
+
                     if( !$this->loadLine() ) {
                         return null;
                     }
@@ -96,27 +96,27 @@ class Scanner {
                 }
                 //var_dump($this->inputLine);
                 foreach($this->tokens as $token) {
-                    
+
                     if ($token->match($this->inputLine,$this->inputPosition)) {
                         //var_dump($this->inputLine, $token);
                         $this->currentToken = $token;
                         break;
                     }
                 }
-                
+
                 if( is_null( $this->currentToken ) ) {
                     throw new \Exception("Unrecognized Input");
                 }
         }
-        
+
         return $this->currentToken;
     }
-    
+
 
     public function matchAdvance( Token $candidate )
-    {	
+    {
         if( $this->match($candidate) )
-        {	
+        {
             $lexeme = $this->currentToken->lexeme();
             $this->advance();
             return $lexeme;
@@ -124,14 +124,15 @@ class Scanner {
             return null;
     }
 
-  
+
     public function required( Token $candidate )
-    {	$lexeme =	$this->matchAdvance($candidate);
-            if( $lexeme == null ) {
-                    throw new Exception(
-                                    "\"" . $this->candidate->__toString() . "\" expected.");
-            }
-            return lexeme;
+    {
+        $lexeme =	$this->matchAdvance($candidate);
+        if( $lexeme == null ) {
+                throw new Exception(
+                                "\"" . $this->candidate->__toString() . "\" expected.");
+        }
+        return $lexeme;
     }
 
     public function match( Token $candidate )
