@@ -1,5 +1,7 @@
 <?php
 namespace SQL;
+
+use SQL\Cursor;
 /**
  * statement       ::=
                     INSERT  INTO IDENTIFIER [LP idList RP]
@@ -311,6 +313,25 @@ class Database {
              $this->location = $location;
         }
 
+        /** Top-level expression production. Returns an Expression
+	 *  object which will interpret the expression at runtime
+	 *  when you call it's evaluate() method.
+	 *  <PRE>
+     *  expr    ::=     andExpr expr'
+     *  expr'   ::= OR  andExpr expr'
+     *          |   e
+     *  </PRE>
+	 */
+
+        private function expr()
+        {
+            $left = $this->andExpr();
+            while( $this->in->matchAdvance(self::$OR) != null ){
+                    $left = new LogicalExpression( $left, self::$OR, $this->andExpr());
+            }
+            return left;
+        }
+
         //----------------------------------------------------------------------
         /*
          * declarations    ::= IDENTIFIER [type] [NOT [NULL]] declaration'
@@ -430,7 +451,7 @@ class Database {
                         {	$this->in->required( self::TABLE );
                                 $tableName = $in->required( self::IDENTIFIER );
                                 $in->required( self::$LP );
-                                $this->createTable( $tableName, declarations() );
+                                $this->createTable( $tableName, $this->declarations() );
                                 $this->in->required( self::$RP );
                         }
                 }
@@ -532,6 +553,23 @@ class Location
     {
         return \mkdir($this->path);
     }
+}
+
+//======================================================================
+// The methods that parse the the productions rooted in expr work in
+// concert to build an Expression object that evaluates the expression.
+// This is an example of both the Interpreter and Composite pattern.
+// An expression is represented in memory as an abstract syntax tree
+// made up of instances of the following classes, each of which
+// references its subexpressions.
+
+interface Expression
+{	/* Evaluate an expression using rows identified by the
+         * two iterators passed as arguments. <code>j</code>
+         * is null unless a join is being processed.
+         */
+
+        public function evaluate(Cursor $tables);
 }
 
 
