@@ -46,23 +46,23 @@ interface Table extends Serializable {
 	 * @throws IndexOutOfBoundsException One of the requested columns
 	 * 				doesn't exist in either table.
 	 */
-	public function insert( array $columnNames, array $values );
+	public function insert(  array $values ,array $columnNames=null);
 
 	/** A convenience overload of {@link #insert(String[],Object[])} */
 
-	public function insert( /*Collection*/ $columnNames, /*Collection*/ $values );
+	//public function insert( /*Collection*/ $columnNames, /*Collection*/ $values );
 
 	/** In this version of insert, values must have as many elements as there
 	 *  are columns, and the values must be in the order specified when the
 	 *  Table was created.
 	 * @return the number of rows affected by the operation.
 	 */
-	public function insert( array $values );
+	//public function insert( array $values );
 
 	/** A convenience overload of {@link #insert(Object[])}
 	 */
 
-	public function insert( /*Collection*/ $values );
+	//public function insert( /*Collection*/ $values );
 
 	/**
 	 * Update cells in the table. The {@link Selector} object serves
@@ -182,16 +182,16 @@ interface Table extends Serializable {
 	 * 		that were accepted by the {@link Selector}.
 	 */
 
-	/*Table*/ public function select(/*Selector*/ $where, /*String[]*/ $requestedColumns, /*Table[]*/ $other);
+	/*Table*/ public function select(/*Selector*/ $where, /*String[]*/ $requestedColumns=null, /*Table[]*/ $other=null);
 
 	/** A more efficient version of
 	 * <code>select(where, requestedColumns, null);</code>
 	 */
-	/*Table*/public function  select(/*Selector*/ $where, /*String[]*/ $requestedColumns );
+	///*Table*/public function  select(/*Selector*/ $where, /*String[]*/ $requestedColumns );
 
 	/** A more efficient version of <code>select(where, null, null);</code>
 	 */
-	/*Table*/ public function select(/*Selector*/ $where);
+	///*Table*/ public function select(/*Selector*/ $where);
 
 	/** A convenience method that translates Collections to arrays, then
 	 *  calls {@link #select(Selector,String[],Table[])};
@@ -201,13 +201,12 @@ interface Table extends Serializable {
 	 *				the current one for the purposes of this SELECT
 	 *				operation.
 	 */
-	/*Table*/ public function select(/*Selector*/ $where, /*Collection*/ $requestedColumns,
-		/*Collection*/ $other);
+	///*Table*/ public function select(/*Selector*/ $where, /*Collection*/ $requestedColumns,/*Collection*/ $other);
 
 	/** Convenience method, translates Collection to String array, then
 	 *  calls String-array version.
 	 */
-	/*Table*/ public function select(/*Selector*/ $where, /*Collection*/ $requestedColumns );
+	///*Table*/ public function select(/*Selector*/ $where, /*Collection*/ $requestedColumns );
 
 	/** Return an iterator across the rows of the current table.
 	 */
