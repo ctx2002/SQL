@@ -132,7 +132,7 @@ class Database {
         private static $TIMES;
         private static $DIVIDE;
 
-        private $tables;
+        public  $tables;
         private $location;
         private $affectedRows;
         private $expression;
@@ -218,6 +218,19 @@ class Database {
         self::$DATE	=   $this->tokenSet->create( "date(\\s*\\(.*?\\))?"		);
         self::$IDENTIFIER	=   $this->tokenSet->create( "[a-zA-Z_0-9/\\\\:~]+"	);//{=Database.lastToken}
 
+    }
+    
+    public function error( /**String**/ $message )  {	
+        throw $this->in->failure( $message );
+    }
+
+    /** Like {@link #error}, but throws the exception only if the
+     *  test fails.
+     */
+    public static function verify( $test, $message ) {
+    	if( !$test ) {
+            throw $this->in->failure( $message );
+        }
     }
 
     public function affectedRows()
@@ -331,6 +344,153 @@ class Database {
             }
             return left;
         }
+        
+        // andExpr			::= 	relationalExpr andExpr'
+	// andExpr'			::= AND relationalExpr andExpr'
+	// 					|	e
+
+	private function andExpr()
+	{	$left = $this->relationalExpr();
+		while( $this->in->matchAdvance(self::$AND) != null )
+			$left = new LogicalExpression( $left, self::$AND, $this->relationalExpr() );
+		return $left;
+	}
+        
+        // relationalExpr ::=   		additiveExpr relationalExpr'
+	// relationalExpr'::=	  RELOP additiveExpr relationalExpr'
+	// 						| EQUAL additiveExpr relationalExpr'
+	// 						| LIKE  additiveExpr relationalExpr'
+	// 						| e
+
+	private function relationalExpr()
+	{	$left = $this->additiveExpr();
+		while( true )
+		{	$lexeme;
+			if( ($lexeme = $this->in->matchAdvance(self::$RELOP)) != null )
+			{	/**@var RelationalOperator**/ $op;
+				if( strlen($lexeme) == 1 ) {
+                                    
+                                    $op = $lexeme[0]=='<' ? self::$LT : self::$GT ;     
+                                    
+                                }
+				else
+                                {	
+                                    //if length is not 1
+                                    if (strlen($lexeme) > 1) {
+                                        if ($lexeme[0] == '<' && $lexeme[1] == '>') {
+                                           $op = $self::NE;
+                                        } else {
+                                           $op = $lexeme[0]=='<' ? self::$LE : self::$GE ;
+                                        }
+                                    }
+                                    /*if( lexeme.charAt(0)=='<' && lexeme.charAt(1)=='>')
+                                            op = NE;
+                                    else
+                                            op = lexeme.charAt(0)=='<' ? LE : GE ;*/
+				}
+				$left = new RelationalExpression($left, $op, $this->additiveExpr());
+			}
+			else if( $this->in->matchAdvance(self::$EQUAL) != null )
+			{	$left = new RelationalExpression($left, self::$EQ, $this->additiveExpr());
+			}
+			else if( $this->in->matchAdvance(self::$LIKE) != null )
+			{	$left = new LikeExpression($left, $this->additiveExpr());
+			}
+			else
+				break;
+		}
+		return $left;
+	}
+        
+        // additiveExpr	::= 			 multiplicativeExpr additiveExpr'
+	// additiveExpr'	::= ADDITIVE multiplicativeExpr additiveExpr'
+	// 					|	e
+
+	private function /**Expression**/ additiveExpr()
+	{	$lexeme;
+		$left = $this->multiplicativeExpr();
+		while( ($lexeme = $this->in->matchAdvance(self::$ADDITIVE)) != null )
+		{	/*MathOperator*/ $op = $lexeme[0] == '+' ? self::$PLUS : self::$MINUS;
+			$left = new ArithmeticExpression(
+							$left, $tihs->multiplicativeExpr(), $op );
+		}
+		return $left;
+	}
+
+	// multiplicativeExpr	::=       term multiplicativeExpr'
+	// multiplicativeExpr'	::= STAR  term multiplicativeExpr'
+	// 						|	SLASH term multiplicativeExpr'
+	// 						|	e
+
+	private Expression multiplicativeExpr()			throws ParseFailure
+	{ Expression left = term();
+		while( true )
+		{	if( in.matchAdvance(STAR) != null)
+				left = new ArithmeticExpression( left, term(), TIMES );
+			else if( in.matchAdvance(SLASH) != null)
+				left = new ArithmeticExpression( left, term(), DIVIDE );
+			else
+				break;
+		}
+		return left;
+	}
+
+	// term				::=	NOT expr
+	// 					|	LP expr RP
+	// 					|	factor
+
+	private Expression term()			throws ParseFailure
+	{	if( in.matchAdvance(NOT) != null )
+		{	return new NotExpression( expr() );
+		}
+		else if( in.matchAdvance(LP) != null )
+		{	Expression toReturn = expr();
+			in.required(RP);
+			return toReturn;
+		}
+		else
+			return factor();
+	}
+
+	// factor		::= compoundId | STRING | NUMBER | NULL
+	// compoundId		::= IDENTIFIER compoundId'
+	// compoundId'		::= DOT IDENTIFIER
+	// 					|	e
+
+	private function factor()
+	{	try
+		{	/**@var String**/  $lexeme;
+			/**@var Value**/   $result;
+
+                    if( ($lexeme = $this->in->matchAdvance(self::$STRING)) != null ) {
+                        $result = new StringValue( $lexeme );
+                    }
+                    else if( ($lexeme = $this->in->matchAdvance(self::$NUMBER)) != null ) {
+                        $result = new NumericValue( $lexeme );
+                    }
+                    else if( ($lexeme = $this->in->matchAdvance(self::$NULL)) != null ) {
+                        $result = new NullValue();
+                    }
+                    else
+                    {	$columnName  = $this->in->required(self::$IDENTIFIER);
+                            $tableName   = null;
+
+                            if( $this->in->matchAdvance(self::$DOT) != null )
+                            {
+                                $tableName  = $columnName;
+                                $columnName = $this->in->required(self::$IDENTIFIER);
+                            }
+
+                            $result = new IdValue( $tableName, $columnName,$this );
+                    }
+
+                    return new AtomicExpression($result);
+		}
+		catch( Exception $e) { /* fall through */ }
+
+		$this->error("Couldn't parse Number"); // Always throws a ParseFailure
+		return null;
+	}
 
         //----------------------------------------------------------------------
         /*
@@ -571,5 +731,178 @@ interface Expression
 
         public function evaluate(Cursor $tables);
 }
+
+class AtomicExpression implements Expression
+{	private $atom;
+        public function __construct( Value $atom )
+        {	$this->atom = $atom;
+        }
+        public function evaluate(/* Cursor[]*/ $tables )
+        {	return $atom instanceof IdValue
+                        ? $this->atom->value($tables)	// lookup cell in table and
+                        : $this->atom		// convert to appropriate type
+                        ;
+        }
+}
+
+class LogicalExpression implements Expression
+{	
+    private /**final boolean**/ $isAnd;
+    private /**final Expression**/ $left, $right;
+
+    public function __construct( /**Expression**/ $left, Token $op, Expression $right )
+    {	
+        //assert op==AND || op==OR;
+        if ( !($op == self::$AND || $op==self::$OR) ) {
+            throw Exception("Assertion failed. LogicalExpression")
+        }
+        $this->isAnd	=  ($op == self::$AND);
+        $this->left	= $left;
+        $this->right = $right;
+    }
+
+    public function evaluate( /***Cursor***/ $tables )
+    {	
+        /**@Value**/ $leftValue  = $left->evaluate($tables);
+        /**@var Value**/ $rightValue = $right->evaluate($tables);
+        \SQL\Databse::verify
+        (	 
+          $leftValue  instanceof BooleanValue
+          && $rightValue instanceof BooleanValue,
+          "operands to AND and OR must be logical/relational"
+        );
+
+        $l = $this->leftValue->value();
+        $r = $this->rightValue->value();
+
+        return new BooleanValue( $this->isAnd ? ($l && $r) : ($l || $r) );
+    }
+}
+
+interface Value	// tagging interface
+{
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class NullValue implements Value
+{	public function toString(){ return null; }
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class BooleanValue implements Value
+{	/**boolean**/ private $value;
+        public function __construct( /**boolean**/ $value )
+        {
+            $this->value = $value;
+        }
+        public function value()	  { return $this->value; }
+        public function toString(){ return $this->value; }
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class StringValue implements Value
+{	private $value;
+        public function __construct(/**String**/ $lexeme)
+        {	
+            //value = $lexeme.replaceAll("['\"](.*?)['\"]", "$1" );
+            $this->value = preg_replace("%['\"](.*?)['\"]%", "${1}", $lexeme);
+        }
+        public function value()	{ return $this->value; }
+        public function toString(){ return $this->value; }
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class NumericValue implements Value
+{	private /***double**/ $value;
+        public function __construct(/**double**/ $value)	// initialize from a double.
+        {	
+            if (is_numeric($value)) {
+                $this->value = $value;
+            } else {
+                throw new Exception($value . " is not a numeric.");
+            }
+        }
+        /*public NumericValue(String s) throws java.text.ParseException
+        {	this.value = NumberFormat.getInstance().parse(s).doubleValue();
+        }*/
+        public function value()
+        {	return $this->value;
+        }
+        public function toString() // round down if the fraction is very small
+        {	
+                /*if( Math.abs(value - Math.floor(value)) < 1.0E-20 )
+                        return String.valueOf( (long)value );
+                else
+                        return String.valueOf( value );*/
+            $this->value;
+        }
+}
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class IdValue implements Value
+{	/**String**/ private $tableName;
+        /**String**/ private $columnName;
+            private $db;
+        public function __construct(/**String**/ $tableName, $columnName,Database $database)
+        {	
+            $this->tableName  = $tableName;
+            $this->columnName = $columnName;
+            $this->db = $database;
+        }
+
+        /** Using the cursor, extract the referenced cell from
+         *  the current Row and return it's contents as a String.
+         *  @return the value as a String or null if the cell
+         *  		was null.
+         */
+        public function toString(/** Cursor[]**/ $participants )
+        {	$content = null;
+
+                // If no name is to the left of the dot, then use
+                // the (only) table.
+
+                if( $this->tableName == null ) {
+                    $obj = $participants[0]; 
+                    content= $obj->column( $this->columnName );
+                }
+                else
+                {	/**Table**/ $container = /**(Table)**/ $this->db->tables['tableName'];
+
+                        // Search for the table whose name matches
+                        // the one to the left of the dot, then extract
+                        // the desired column from that table.
+
+                        $content = null;
+                        for( $i = 0; $i < count( $participants ); ++$i )
+                        {	if( $participants[$i]->isTraversing($container) )
+                                {	$content = $participants[$i]->column($this->columnName);
+                                        break;
+                                }
+                        }
+                }
+
+                // All table contents are converted to Strings, whatever
+                // their original type. This conversion can cause
+                // problems if the table was created manually.
+
+                return ($content == null) ? null : $content . "";
+        }
+
+        /** Using the cursor, extract the referenced cell from the
+         *  current row of the appropriate table, convert the
+         *  contents to a {@link NullValue}, {@link NumericValue},
+         *  or {@link StringValue}, as appropriate, and return
+         *  that value object.
+         */
+        public function value( /**Cursor[]**/ $participants )
+        {	$s = $this->toString( $participants );
+                try
+                {	return ( $s == null )
+                                ? new NullValue()
+                                : new NumericValue(s);
+                }
+                catch( Exception $e )
+                {	// The NumericValue constructor failed, so it must be
+                        // a string. Fall through to the return-a-string case.
+                }
+                return new \SQL\StringValue( $s );
+        }
+}
+
 
 

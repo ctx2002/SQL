@@ -123,6 +123,12 @@ class Scanner {
         }
             return null;
     }
+    
+    public function failure( $message )
+    { 	
+        return new ParseFailure($message,
+                                $this->inputLine, $this->inputPosition, $this->inputLineNumber);
+    }
 
 
     public function required( Token $candidate )
