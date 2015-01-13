@@ -2,6 +2,7 @@
 namespace SQL;
 
 use SQL\Cursor;
+use SQL\TableFactory;
 /**
  * statement       ::=
                     INSERT  INTO IDENTIFIER [LP idList RP]
@@ -275,19 +276,19 @@ class Database {
                 $this->expression   =  $expression;
                 $this->in   = new Scanner($this->tokens, $expression);
                 $this->in->advance();	// advance to the first token.
-                //return statement();
+                return $this->statement();
              }
              catch( ParseFailure $e )
              {
                 if( transactionLevel > 0 ) {
-                        rollback();
+                    rollback();
                 }
                 throw e;
              }
              catch( Exception $e )
              {
                 if( transactionLevel > 0 ) {
-                        rollback();
+                    rollback();
                 }
                 throw e;
              }
@@ -422,17 +423,18 @@ class Database {
 	// 						|	SLASH term multiplicativeExpr'
 	// 						|	e
 
-	private Expression multiplicativeExpr()			throws ParseFailure
-	{ Expression left = term();
-		while( true )
-		{	if( in.matchAdvance(STAR) != null)
-				left = new ArithmeticExpression( left, term(), TIMES );
-			else if( in.matchAdvance(SLASH) != null)
-				left = new ArithmeticExpression( left, term(), DIVIDE );
-			else
-				break;
-		}
-		return left;
+	private /*Expression*/ function multiplicativeExpr()			/*throws ParseFailure*/
+	{ 
+            Expression left = term();
+            while( true )
+            {	if( in.matchAdvance(STAR) != null)
+                            left = new ArithmeticExpression( left, term(), TIMES );
+                    else if( in.matchAdvance(SLASH) != null)
+                            left = new ArithmeticExpression( left, term(), DIVIDE );
+                    else
+                            break;
+            }
+            return left;
 	}
 
 	// term				::=	NOT expr
@@ -457,40 +459,41 @@ class Database {
 	// compoundId'		::= DOT IDENTIFIER
 	// 					|	e
 
-	private function factor()
-	{	try
-		{	/**@var String**/  $lexeme;
-			/**@var Value**/   $result;
+        private function factor()
+        {   
+            try
+            {	/**@var String**/  $lexeme;
+                    /**@var Value**/   $result;
 
-                    if( ($lexeme = $this->in->matchAdvance(self::$STRING)) != null ) {
-                        $result = new StringValue( $lexeme );
-                    }
-                    else if( ($lexeme = $this->in->matchAdvance(self::$NUMBER)) != null ) {
-                        $result = new NumericValue( $lexeme );
-                    }
-                    else if( ($lexeme = $this->in->matchAdvance(self::$NULL)) != null ) {
-                        $result = new NullValue();
-                    }
-                    else
-                    {	$columnName  = $this->in->required(self::$IDENTIFIER);
-                            $tableName   = null;
+                if( ($lexeme = $this->in->matchAdvance(self::$STRING)) != null ) {
+                    $result = new StringValue( $lexeme );
+                }
+                else if( ($lexeme = $this->in->matchAdvance(self::$NUMBER)) != null ) {
+                    $result = new NumericValue( $lexeme );
+                }
+                else if( ($lexeme = $this->in->matchAdvance(self::$NULL)) != null ) {
+                    $result = new NullValue();
+                }
+                else
+                {	$columnName  = $this->in->required(self::$IDENTIFIER);
+                        $tableName   = null;
 
-                            if( $this->in->matchAdvance(self::$DOT) != null )
-                            {
-                                $tableName  = $columnName;
-                                $columnName = $this->in->required(self::$IDENTIFIER);
-                            }
+                        if( $this->in->matchAdvance(self::$DOT) != null )
+                        {
+                            $tableName  = $columnName;
+                            $columnName = $this->in->required(self::$IDENTIFIER);
+                        }
 
-                            $result = new IdValue( $tableName, $columnName,$this );
-                    }
+                        $result = new IdValue( $tableName, $columnName,$this );
+                }
+                
+                return new \SQL\AtomicExpression($result);
+            }
+            catch( Exception $e) { /* fall through */ }
 
-                    return new AtomicExpression($result);
-		}
-		catch( Exception $e) { /* fall through */ }
-
-		$this->error("Couldn't parse Number"); // Always throws a ParseFailure
-		return null;
-	}
+            $this->error("Couldn't parse Number"); // Always throws a ParseFailure
+            return null;
+        }
 
         //----------------------------------------------------------------------
         /*
@@ -507,9 +510,9 @@ class Database {
         */
         private function declarations()
         {
-            $dentifiers = new ArrayObject();
+            $dentifiers = array();
 
-            $id;
+            $id = '';
             while( true )
             {
                 if( $this->in->matchAdvance(self::$PRIMARY) != null )
@@ -523,8 +526,8 @@ class Database {
                     {
                         $id = $this->in->required(self::$IDENTIFIER);
 
-                        $identifiers->append($id);	// get the identifier
-
+                        //$identifiers->append($id);	// get the identifier
+                        $identifiers[] = $id;
                             // Skip past a type declaration if one's there
                             if(	($this->in->matchAdvance(self::$INTEGER) != null)
                             ||  ($this->in->matchAdvance(self::$CHAR)    != null)	)
@@ -548,12 +551,12 @@ class Database {
                             {	 // do nothing
                             }
 
-                            $this->in->matchAdvance( self::NOT );
-                            $this->in->matchAdvance( self::NULL );
+                            $this->in->matchAdvance( self::$NOT );
+                            $this->in->matchAdvance( self::$NULL );
                     }
 
                     if( $this->in->matchAdvance(self::$COMMA) == null ) // no more columns
-                            break;
+                        break;
             }
 
             return $identifiers;
@@ -603,17 +606,19 @@ class Database {
                 if( $this->in->matchAdvance(self::$CREATE) != null )
                 {
                     if( $this->in->match( self::$DATABASE ) )
-                        {
-                            $this->in->advance();
-                            $this->createDatabase( $this->in->required( self::$IDENTIFIER ) );
-                        }
-                        else // must be CREATE TABLE
-                        {	$this->in->required( self::TABLE );
-                                $tableName = $in->required( self::IDENTIFIER );
-                                $in->required( self::$LP );
-                                $this->createTable( $tableName, $this->declarations() );
-                                $this->in->required( self::$RP );
-                        }
+                    {
+                        $this->in->advance();
+                        $this->createDatabase( $this->in->required( self::$IDENTIFIER ) );
+                    }
+                    else // must be CREATE TABLE
+                    {	
+                        //CREATE  TABLE    IDENTIFIER LP idList RP
+                        $this->in->required( self::TABLE );
+                        $tableName = $in->required( self::IDENTIFIER );
+                        $in->required( self::$LP );
+                        $this->createTable( $tableName, $this->declarations() );
+                        $this->in->required( self::$RP );
+                    }
                 }
                 else if( in.matchAdvance(DROP) != null )
                 {	in.required( TABLE );
@@ -700,6 +705,23 @@ class Database {
 
                 return null;
         }
+        
+        /** Create a new table. If a table by this name exists, it's
+	 *  overwritten.
+         * 
+         * $this->createTable( $tableName, $this->declarations() );
+	 */
+	public function createTable( /**String**/ $name, Array $columns )
+        {	
+            $columnNames = new SplFixedArray(count($colums) );
+            $i = 0;
+            foreach ($columns as $key => $value) {
+                $columnNames[$i++] = (String)$value; 
+            }
+
+            $newTable = TableFactory::create($name, $columnNames);
+            $this->tables[$name] = $newTable;
+	}
 }
 
 class Location
