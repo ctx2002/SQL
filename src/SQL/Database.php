@@ -72,6 +72,7 @@ compoundId          ::= IDENTIFIER compoundId'
 compoundId'         ::= DOT IDENTIFIER
                     |   e
  * **/
+
 class  RelationalOperator{ public function __construct(){}}
 class  MathOperator{ public function __construct(){} }
 
@@ -82,63 +83,63 @@ class Database {
 
     private static $LP;
     private static $RP;
-        private static $DOT ;
-        private static $STAR  ;
-        private static $SLASH ;
-        private static $AND;
-        private static $BEGIN;
-        private static $COMMIT;
-        private static $CREATE;
-        private static $DATABASE ;
-        private static $DELETE;
-        private static $DROP;
-        private static $DUMP;
-        private static $FROM;
-        private static $INSERT;
-        private static $INTO;
-        private static $KEY;
-        private static $LIKE;
-        private static $NOT;
-        private static $NULL;
-        private static $OR;
-        private static $PRIMARY;
-        private static $ROLLBACK	;
-        private static $SELECT;
-        private static $SET;
-        private static $TABLE;
-        private static $UPDATE;
-        private static $USE;
-        private static $VALUES;
-        private static $WHERE;
-        private static $WORK;
-        private static $ADDITIVE;
-        private static $STRING;
-        private static $RELOP;
-        private static $NUMBER;
-        private static $INTEGER;
-        private static $NUMERIC;
-        private static $CHAR;
-        private static $DATE;
-        private static $IDENTIFIER;//{=Database.lastToken}
+    private static $DOT ;
+    private static $STAR  ;
+    private static $SLASH ;
+    private static $AND;
+    private static $BEGIN;
+    private static $COMMIT;
+    private static $CREATE;
+    private static $DATABASE ;
+    private static $DELETE;
+    private static $DROP;
+    private static $DUMP;
+    private static $FROM;
+    private static $INSERT;
+    private static $INTO;
+    private static $KEY;
+    private static $LIKE;
+    private static $NOT;
+    private static $NULL;
+    private static $OR;
+    private static $PRIMARY;
+    private static $ROLLBACK	;
+    private static $SELECT;
+    private static $SET;
+    private static $TABLE;
+    private static $UPDATE;
+    private static $USE;
+    private static $VALUES;
+    private static $WHERE;
+    private static $WORK;
+    private static $ADDITIVE;
+    private static $STRING;
+    private static $RELOP;
+    private static $NUMBER;
+    private static $INTEGER;
+    private static $NUMERIC;
+    private static $CHAR;
+    private static $DATE;
+    private static $IDENTIFIER;//{=Database.lastToken}
 
-        private static  $EQ;
-        private static $LT;
-        private static $GT;
-        private static $LE;
-        private static $NE;
-        private static $GE;
+    private static  $EQ;
+    private static $LT;
+    private static $GT;
+    private static $LE;
+    private static $NE;
+    private static $GE;
 
-        private static $PLUS;
-        private static $MINUS;
-        private static $TIMES;
-        private static $DIVIDE;
+    private static $PLUS;
+    private static $MINUS;
+    private static $TIMES;
+    private static $DIVIDE;
 
-        public  $tables;
-        private $location;
-        private $affectedRows;
-        private $expression;
-        private $transactionLevel = 0;
-        private $in;
+    public  $tables;
+    private $location;
+    private $affectedRows;
+    private $expression;
+    private $transactionLevel = 0;
+    private $in;
     /**
      * Create a database object attached to the current directory.
     *
@@ -425,33 +426,36 @@ class Database {
 
 	private /*Expression*/ function multiplicativeExpr()			/*throws ParseFailure*/
 	{ 
-            Expression left = term();
+            /*Expression*/ $left = $this->term();
             while( true )
-            {	if( in.matchAdvance(STAR) != null)
-                            left = new ArithmeticExpression( left, term(), TIMES );
-                    else if( in.matchAdvance(SLASH) != null)
-                            left = new ArithmeticExpression( left, term(), DIVIDE );
+            {	if( $this->in->matchAdvance(self::$STAR) != null)
+                        $left = new ArithmeticExpression( $left, $this->term(), self::$TIMES );
+                    else if( $this->in->matchAdvance(self::$SLASH) != null)
+                        $left = new ArithmeticExpression( $left, $this->term(), self::$DIVIDE );
                     else
-                            break;
+                        break;
             }
-            return left;
+            return $left;
 	}
 
 	// term				::=	NOT expr
 	// 					|	LP expr RP
 	// 					|	factor
 
-	private Expression term()			throws ParseFailure
-	{	if( in.matchAdvance(NOT) != null )
-		{	return new NotExpression( expr() );
-		}
-		else if( in.matchAdvance(LP) != null )
-		{	Expression toReturn = expr();
-			in.required(RP);
-			return toReturn;
+	private function /*Expression*/ term()	//throws ParseFailure
+	{	
+            if( $this->in->matchAdvance(self::$NOT) != null )
+	    {	
+                return new NotExpression( $this->expr() );
+	    }
+		else if( $this->in->matchAdvance(self::$LP) != null )
+		{	
+                    /*Expression*/ $toReturn = $this->expr();
+		    $this->in->required(self::$RP);
+		    return $toReturn;
 		}
 		else
-			return factor();
+		    return $this->factor();
 	}
 
 	// factor		::= compoundId | STRING | NUMBER | NULL
@@ -620,87 +624,87 @@ class Database {
                         $this->in->required( self::$RP );
                     }
                 }
-                else if( in.matchAdvance(DROP) != null )
-                {	in.required( TABLE );
-                        dropTable( in.required(IDENTIFIER) );
+                else if( $this->in->matchAdvance(self::$DROP) != null )
+                {	$this->in->required( self::$TABLE );
+                        $this->dropTable( $this->in->required(self::$IDENTIFIER) );
                 }
-                else if( in.matchAdvance(USE) != null )
-                {	in.required( DATABASE   );
-                        useDatabase( new File( in.required(IDENTIFIER) ));
+                else if( $this->in->matchAdvance(self::$USE) != null )
+                {	$this->in->required( self::$DATABASE   );
+                        $this->useDatabase( self::$IDENTIFIER );
                 }
 
-                else if( in.matchAdvance(BEGIN) != null )
-                {	in.matchAdvance(WORK);	// ignore it if it's there
-                        begin();
+                else if( $this->in->matchAdvance(self::$BEGIN) != null )
+                {	$this->in->matchAdvance(self::$WORK);	// ignore it if it's there
+                        $this->begin();
                 }
-                else if( in.matchAdvance(ROLLBACK) != null )
-                {	in.matchAdvance(WORK);	// ignore it if it's there
-                        rollback();
+                else if( $this->in->matchAdvance(self::$ROLLBACK) != null )
+                {	$this->in->matchAdvance(self::$WORK);	// ignore it if it's there
+                        $this->rollback();
                 }
-                else if( in.matchAdvance(COMMIT) != null )
-                {	in.matchAdvance(WORK);	// ignore it if it's there
-                        commit();
+                else if( $this->in->matchAdvance(self::$COMMIT) != null )
+                {	$this->in->matchAdvance(self::$WORK);	// ignore it if it's there
+                        $this->commit();
                 }
-                else if( in.matchAdvance(DUMP) != null )
-                {	dump();
+                else if( $this->in->matchAdvance(self::$DUMP) != null )
+                {	$this->dump();
                 }
 
                 // These productions must be handled via an
                 // interpreter:
 
-                else if( in.matchAdvance(INSERT) != null )
-                {	in.required( INTO );
-                        String tableName = in.required( IDENTIFIER );
+                else if( $this->in->matchAdvance(self::$INSERT) != null )
+                {	$this->in->required( self::$INTO );
+                        $tableName = $this->in->required( self::$IDENTIFIER );
 
-                        List columns = null, values = null;
+                        /*List*/ $columns = null;
+                        /*List*/ $values = null;
 
-                        if( in.matchAdvance(LP) != null )
-                        {	columns = idList();
-                                in.required(RP);
+                        if( $this->in->matchAdvance(self::$LP) != null )
+                        {	$columns = $this->idList();
+                                $this->in->required(self::$RP);
                         }
-                        if( in.required(VALUES) != null )
-                        {	in.required( LP );
-                                values = exprList();
-                                in.required( RP );
+                        if( $this->in->required(self::$VALUES) != null )
+                        {	$this->in->required( self::$LP );
+                                $values = $this->exprList();
+                                $this->in->required( self::$RP );
                         }
-                        affectedRows = doInsert( tableName, columns, values );
+                        $affectedRows = $this->doInsert( $tableName, $columns, $values );
                 }
-                else if( in.matchAdvance(UPDATE) != null )
+                else if( $this->in->matchAdvance(self::$UPDATE) != null )
                 {	// First parse the expression
-                        String tableName = in.required( IDENTIFIER );
-                        in.required( SET );
-                        final String columnName = in.required( IDENTIFIER );
-                        in.required( EQUAL );
-                        final Expression value = expr();
-                        in.required(WHERE);
-                        affectedRows =
-                                doUpdate( tableName, columnName, value, expr() );
+                        $tableName = $this->in->required( self::$IDENTIFIER );
+                        $this->in->required( self::$SET );
+                        $columnName = $this->in->required( self::$IDENTIFIER );
+                        $this->in->required( self::$EQUAL );
+                        /*final Expression*/ $value = $this->expr();
+                        $this->in->required(self::$WHERE);
+                        $affectedRows = $this->doUpdate( $tableName, $columnName, $value, $this->expr() );
                 }
-                else if( in.matchAdvance(DELETE) != null )
-                {	in.required( FROM );
-                        String tableName = in.required( IDENTIFIER );
-                        in.required( WHERE );
-                        affectedRows = doDelete( tableName, expr() );
+                else if( $this->in->matchAdvance(self::$DELETE) != null )
+                {	$this->in->required( self::$FROM );
+                        $tableName = $this->in->required( self::$IDENTIFIER );
+                        $this->in->required( self::$WHERE );
+                        $affectedRows = $this->doDelete( $tableName, $this->expr() );
                 }
-                else if( in.matchAdvance(SELECT) != null )
-                {	List columns = idList();
+                else if( $this->in->matchAdvance(self::$SELECT) != null )
+                {	/*List*/ $columns = $this->idList();
 
-                        String into = null;
-                        if( in.matchAdvance(INTO) != null )
-                                into = in.required(IDENTIFIER);
+                        $into = null;
+                        if( $this->in->matchAdvance(self::$INTO) != null )
+                                $into = $this->in->required(self::$IDENTIFIER);
 
-                        in.required( FROM );
-                        List requestedTableNames = idList();
+                        $this->in->required( self::$FROM );
+                        /*List*/ $requestedTableNames = $this->idList();
 
-                        Expression where = (in.matchAdvance(WHERE) == null)
-                                                                ? null : expr();
-                        Table result = doSelect(columns, into,
-                                                                requestedTableNames, where );
-                        return result;
+                        /*Expression*/ $where = ($this->in->matchAdvance(self::$WHERE) == null)
+                                                                ? null : $this->expr();
+                        /*Table*/ $result = $this->doSelect($columns, $into,
+                                                                $requestedTableNames, $where );
+                        return $result;
                 }
                 else
-                {	error("Expected insert, create, drop, use, "
-                                                                                +"update, delete or select");
+                {	$this->error("Expected insert, create, drop, use, "
+                                    . "update, delete or select");
                 }
 
                 return null;
@@ -735,6 +739,7 @@ class Location
     {
         return \mkdir($this->path);
     }
+    
 }
 
 //======================================================================
@@ -749,6 +754,8 @@ interface Expression
 {	/* Evaluate an expression using rows identified by the
          * two iterators passed as arguments. <code>j</code>
          * is null unless a join is being processed.
+         * 
+         * @return Value
          */
 
         public function evaluate(Cursor $tables);
@@ -776,7 +783,7 @@ class LogicalExpression implements Expression
     {	
         //assert op==AND || op==OR;
         if ( !($op == self::$AND || $op==self::$OR) ) {
-            throw Exception("Assertion failed. LogicalExpression")
+            throw Exception("Assertion failed. LogicalExpression");
         }
         $this->isAnd	=  ($op == self::$AND);
         $this->left	= $left;
@@ -801,6 +808,94 @@ class LogicalExpression implements Expression
     }
 }
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class NotExpression implements Expression
+{	
+    private /*Expression*/ $operand;
+
+    public function __construct( Expression $operand )
+    {	
+        $this->operand = $operand;
+    }
+    public function /*Value*/ evaluate( /*Cursor[]*/ $tables ) //throws ParseFailure
+    {	
+        /*Value*/ $value = $this->operand->evaluate( $tables );
+        \SQL\Databse::verify( $value instanceof BooleanValue,
+                              "operands to NOT must be logical/relational");
+        return new BooleanValue( !$value->value() );
+    }
+}
+
+class RelationalExpression implements Expression
+{
+    private /*RelationalOperator*/ $operator;
+    private /*Expression*/ $left, $right;
+
+    public function __construct(Expression $left,
+                                RelationalOperator $operator,
+                                Expression $right )
+    {	
+        $this->operator = $operator;
+        $this->left	= $left;
+        $this->right	= $right;
+    }
+
+    public function evaluate( /*Cursor[]*/ $tables ) //throws ParseFailure
+    {
+            $leftValue  = $this->left->evaluate ( $tables );
+            $rightValue = $this->right->evaluate( $tables );
+
+            if( 	($leftValue  instanceof StringValue)
+                    ||	($rightValue instanceof StringValue) )
+            {	
+                \SQL\Databse::verify($this->operator==self::$EQ || $this->operator==NE,
+                                            "Can't use < <= > or >= with string");
+
+                    /*boolean*/ $isEqual =
+                            $leftValue->toString() == $rightValue->toString();
+
+                    return new BooleanValue($this->operator==self::$EQ ? $isEqual:!$isEqual);
+            }
+
+            if( $rightValue instanceof NullValue
+             ||	$leftValue  instanceof NullValue )
+            {
+                \SQL\Databse::verify($this->operator==self::$EQ || $this->operator==self::$NE,
+                                            "Can't use < <= > or >= with NULL");
+
+                    // Return true if both the left and right sides are instances
+                    // of NullValue.
+                    /*boolean*/ $isEqual = 
+                                    $leftValue->getClass() == $rightValue->getClass();
+
+                    return new BooleanValue($this->operator==self::$EQ ? $isEqual : !$isEqual);
+            }
+
+            // Convert Boolean values to numbers so we can compare them.
+            //
+            if( $leftValue instanceof BooleanValue )
+                    $leftValue = new NumericValue($leftValue->value() ? 1 : 0 );
+            if( $rightValue instanceof BooleanValue )
+                    $rightValue = new NumericValue($rightValue->value() ? 1 : 0 );
+
+            \SQL\Databse::verify( 	$leftValue  instanceof NumericValue
+                         && $rightValue instanceof NumericValue,
+                                                             "Operands must be numbers" );
+
+            $l = $leftValue->value();
+            $r = $rightValue->value();
+
+            return new BooleanValue
+            ( 	( $this->operator == self::$EQ	  ) ? ( $l == $r ) :
+                    ( $this->operator == self::$NE	  ) ? ( $l != $r ) :
+                    ( $this->operator == self::$LT  	  ) ? ( $l >  $r ) :
+                    ( $this->operator == self::$GT  	  ) ? ( $l <  $r ) :
+                    ( $this->operator == self::$LE 	  ) ? ( $l <= $r ) :
+                    /* operator == GE	 */   ( $l >= $r )
+            );
+    }
+}
+///////////////////////////////////////////////////////////////////////////////////
 interface Value	// tagging interface
 {
 }
