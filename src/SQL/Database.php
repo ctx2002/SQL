@@ -975,7 +975,7 @@ class IdValue implements Value
 
                 if( $this->tableName == null ) {
                     $obj = $participants[0]; 
-                    content= $obj->column( $this->columnName );
+                    $content= $obj->column( $this->columnName );
                 }
                 else
                 {	/**Table**/ $container = /**(Table)**/ $this->db->tables['tableName'];
