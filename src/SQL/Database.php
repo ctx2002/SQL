@@ -1,8 +1,8 @@
 <?php
 namespace SQL;
 
-use SQL\Cursor;
-use SQL\TableFactory;
+use \SQL\Cursor;
+use \SQL\TableFactory;
 /**
  * statement       ::=
                     INSERT  INTO IDENTIFIER [LP idList RP]
@@ -76,7 +76,96 @@ compoundId'         ::= DOT IDENTIFIER
 class  RelationalOperator{ public function __construct(){}}
 class  MathOperator{ public function __construct(){} }
 
+
+trait TableMap //implements Map
+{ 		
+    //private $realMap;
+    //public function __construct( /*Map*/ ArrayObject $realMap ){	$this->realMap = $realMap; }
+
+    /** If the requested table is already in memory, return it.
+     *  Otherwise load it from the disk.
+     */
+    public function /*Object*/ get( /*Object*/ $key )
+    {	
+        /*String*/ $tableName = (String)$key;
+            try
+            {	
+                /*Table*/ $desiredTable = /*(Table)*/ $this->realMap[$tableName];
+                    if( $desiredTable == null )
+                    { 
+                        \SQL\TableFactory::load($tableName . ".csv",$this->location);
+                        $this->put($tableName, $desiredTable);
+                    }
+                    return desiredTable;
+            }
+            catch( \Exception $e )
+            {	// Can't use verify(...) or error(...) here because the
+                    // base-class "get" method doesn't throw any exceptions.
+                    // Kludge a runtime-exception toss. Call in.failure()
+                    // to get an exception object that calls out the
+                    // input file name and line number, then transmogrify
+                    // the ParseFailure to a RuntimeException.
+
+                    $message =
+                            "Table not created internally and couldn't be loaded."
+                                                                            ."(" . $e->getMessage() .")\n";
+                    throw new RuntimeException($this->in->failure( $message ) );
+            }
+    }
+		
+    public function put(/*Object*/ $key, /*Object*/ $value)
+    {	// If transactions are active, put the new
+            // table into the same transaction state
+            // as the other tables.
+
+        for( $i = 0; $i < $this->transactionLevel; ++$i ) {
+            $value->begin();
+        }
+
+        return $this->realMap[$key] = $value;
+    }
+
+    public function putAll(/*Map*/ $m)
+    {	
+        throw new \BadMethodCallException();
+    }
+
+    public function /*int*/		size() 	{ return $this->realMap->count(); 		}
+    public function /*boolean*/	isEmpty()	{ return empty( $this->realMap->getArrayCopy());}
+    public function /*Object*/	remove(/*Object*/$k)	{ unset($this->realMap[$k]);		}
+    public function		clear()		{		 $this->realMap->exchangeArray(array());		}
+    
+    public function /*Set*/		keySet() { 
+        $a = $this->realMap->getArrayCopy();
+        return array_keys($a);		
+        
+    }
+    public function /*Collection*/ values() { 
+        $a = $this->realMap->getArrayCopy(); 
+        return array_values($a);		
+        
+    }
+    public function /*Set*/ entrySet()	{ return $this->realMap;	}
+    public function /*boolean*/	equals(/*Object*/ \ArrayObject $o)	{ return $this->realMap->getArrayCopy() == $o->getArrayCopy();		}
+    public function /*int*/	hashCode()			{ return spl_object_hash($this->realMap);	}
+
+    public function /*boolean*/	containsKey(/*Object*/ $k)
+    { 
+        $keys = $this->keySet();
+        return in_array($k,$keys);
+        //return realMap.containsKey(k);
+    }
+    public function containsValue(/*Object*/ $v)
+    {	
+        $values = $this->values();
+        return in_array($v,$values);
+    }
+}
+
+
 class Database {
+    use TableMap;
+    
     private $tokenSet;
     private static $COMMA;
     private static $EQUAL;
@@ -140,16 +229,26 @@ class Database {
     private $expression;
     private $transactionLevel = 0;
     private $in;
+    private $realMap;
+    
     /**
      * Create a database object attached to the current directory.
     *
     */
-    public function __construct()
+    public function __construct(/*File*/ $path, /*Table[]*/ $database)
     {
         $this->tokenSet = new TokenSet();
         $this->init();
-        $this->tables = array();
+        $this->tables = $this;
         $this->location = new Location(".");
+        $this->realMap = new \ArrayObject();
+        
+        $this->useDatabase( $path );
+        
+        for( $i = 0; $i < count($database); ++$i ) {
+            $this->tables->put($database[$i]->name(), $database[$i]);
+        }
+        
     }
 
     protected function init()
@@ -249,10 +348,43 @@ class Database {
         */
        public function useDatabase( $path )
        {
-               $this->dump();
-               $this->tables = array();
-               $this->location = new Location($path);
+            $this->dump();
+            $this->tables->clear();
+            $this->location = new Location($path);
        }
+       
+       //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	private function doDelete( /*String*/ $tableName, Expression $where )											
+	{	
+            //Table t = (Table) tables.get( tableName );
+            $t = $this->tables->get(tableName);
+            try
+            {	
+                $a = new \SQL\DeleteAdapter($this);
+                return $t->delete($a);
+                /*return t.delete
+                    (	new Selector.Adapter()
+                            {	public boolean approve( Cursor[] tables )
+                                    {	try
+                                            {	Value result = where.evaluate(tables);
+                                                    verify( result instanceof BooleanValue,
+                                                            "WHERE clause must yield boolean result" );
+                                                    return ((BooleanValue)result).value();
+                                            }
+                                            catch( ParseFailure e )
+                                            {	throw new ThrowableContainer(e);
+                                            }
+                                    }
+                            }
+                    );
+                 * 
+                 */
+            }
+            catch( ThrowableContainer $container )
+            {	
+                throw /*(ParseFailure)*/ $container->contents();
+            }
+	}
 
        /*******************************************************************
         *  Execute a SQL statement. If an exception is tossed and we are in the
@@ -306,20 +438,99 @@ class Database {
         */
        public function dump()
        {
-            /*Collection values = tables.values();
-            if( values != null )
-            {	for( Iterator i = values.iterator(); i.hasNext(); )
-                    {	Table current = (Table ) i.next();
-                            if( current.isDirty() )
-                            {	Writer out =
-                                            new FileWriter(
-                                                            new File(location, current.name() + ".csv"));
-                                    current.export( new CSVExporter(out) );
-                                    out.close();
-                            }
+            $values = $this->tables->values();
+            if( $values != null )
+            {	
+                //for( Iterator i = values.iterator(); i.hasNext(); )
+                foreach ($values as $current)
+                {	
+                    //Table current = (Table ) i.next();
+                    if( $current->isDirty() )
+                    {	
+                        $out = new \SplFileObject($current->name() . ".csv");
+                        $current->export(new \SQL\CSVImporter($out));
+                        $out = null;
+                        /*Writer out =
+                                    new FileWriter(
+                                                    new File(location, current.name() + ".csv"));
+                            current.export( new CSVExporter(out) );
+                            out.close();
+                         * 
+                         */
                     }
-            }*/
+                }
+            }
        }
+       
+       //@transactions-start
+	//----------------------------------------------------------------------
+	// Transaction processing.
+
+	/** Begin a transaction
+	 */
+	public function begin()
+	{	
+            ++$this->transactionLevel;
+
+	    $currentTables = $this->tables->values();
+            foreach ($currentTables as $i) {
+                $i->begin();
+            }
+            /*for( Iterator i = currentTables.iterator(); i.hasNext(); ) {
+			((Table) i.next()).begin();
+            }*/
+	}
+        
+        /** Commit transactions at the current level.
+	 *  @throws NoSuchElementException if no <code>begin()</code> was issued.
+	 */
+	public function commit() /*throws ParseFailure*/
+	{	
+            assert($this->transactionLevel > 0, "No begin() for commit()");
+            //assert transactionLevel > 0 : "No begin() for commit()";
+            --$this->transactionLevel;
+
+            try
+            {	
+                $currentTables = $this->tables->values();
+                foreach ($currentTables as $i) {
+                    $i->commit(Table::getThisLevel());   
+                }
+                /*for( Iterator i = currentTables.iterator(); i.hasNext() ;)
+                            ((Table) i.next()).commit( Table.THIS_LEVEL );
+                 * 
+                 */
+            }
+            catch(\Exception $e)
+            {                
+                \SQL\Database::verify( false, "No BEGIN to match COMMIT" );
+            }
+	}
+        
+        /** Roll back transactions at the current level
+	 *  @throws NoSuchElementException if no <code>begin()</code> was issued.
+	 */
+	public function rollback() //throws ParseFailure
+	{	
+            assert($this->transactionLevel > 0, "No begin() for commit()");
+            //assert transactionLevel > 0 : "No begin() for commit()";
+	    --$this->transactionLevel;
+            try
+            {	
+                $currentTables = $this->tables->values();
+                foreach ($currentTables as $i) {
+                    $i->rollback(Table::getThisLevel());    
+                }
+                /*for( Iterator i = currentTables.iterator(); i.hasNext() ;)
+                            ((Table) i.next()).rollback( Table.THIS_LEVEL );
+                 * 
+                 */
+            }
+            catch(\Exception $e)
+            {	
+                \SQL\Database::verify( false, "No BEGIN to match ROLLBACK" );
+            }
+	}
 
         public function createDatabase( $dirname )
         {
@@ -724,7 +935,24 @@ class Database {
             }
 
             $newTable = TableFactory::create($name, $columnNames);
-            $this->tables[$name] = $newTable;
+            //tables.put( name, newTable );
+            $this->tables->put($name, $newTable);
+	}
+        
+        /** Destroy both internal and external (on the disk) versions
+	 *  of the specified table.
+	 */
+	public function dropTable($name )
+	{	
+            $this->tables->remove( $name );	// ignore the error if there is one.
+
+            /*File tableFile = new File(location,name);
+            if( tableFile.exists() )
+                    tableFile.delete();*/
+            $file = $this->location->getPath() . "/" . $name;
+            if (\file_exists($file)) {
+                unlink($file);
+            }
 	}
 }
 
@@ -738,6 +966,10 @@ class Location
     public function mkdir()
     {
         return \mkdir($this->path);
+    }
+    
+    public function getPath() {
+        return $this->path;
     }
     
 }

@@ -8,11 +8,6 @@
 
 namespace SQL;
 
-/**
- * Description of ParseFailure
- *
- * @author anru
- */
 class ParseFailure extends \Exception {
     private $inputLine;
     private $inputPosition;

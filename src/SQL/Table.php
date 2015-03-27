@@ -110,7 +110,8 @@ interface Table extends Serializable {
 	 *  Use <code>commit(Table.THIS_LEVEL)</code> rather than
 	 *  <code>commit(false)</code>, for example.
 	 */
-               //TODO
+        public static function getThisLevel();
+        public static function setThisLevel($level);
 	//public static $THIS_LEVEL = false;
 
 	/** A convenience constant that makes calls to {@link #commit}
@@ -119,7 +120,8 @@ interface Table extends Serializable {
 	 *  Use <code>commit(Table.ALL)</code> rather than
 	 *  <code>commit(true)</code>, for example.
 	 */
-               //TODO
+        public static function getAll();
+        public static function setAll($all);
 	//public static final boolean ALL	= true;
 
 	/*** **********************************************************************

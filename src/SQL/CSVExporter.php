@@ -45,6 +45,6 @@ class CSVExporter implements Exporter {
         $this->out->write("\n");
     }
 
-    public void startTable() /*throws IOException*/ { throw new \RuntimeException("nothing to do"); }
-    public void endTable()   /*throws IOException*/ { throw new \RuntimeException("nothing to do"); }
+    public function startTable() /*throws IOException*/ { throw new \RuntimeException("nothing to do"); }
+    public function  endTable()   /*throws IOException*/ { throw new \RuntimeException("nothing to do"); }
 }
