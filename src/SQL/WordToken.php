@@ -20,13 +20,19 @@ class WordToken implements \SQL\Token {
 
             if( (strlen($input) - $offset) < strlen($this->pattern) )
                     return false;
-
+            //extracting a candidate from offset
+            //$candidate is one char more than pattern
             $candidate = substr($input,$offset, $offset + strlen($this->pattern));
-            
+
+
+           //only compare pattern length characters.
+           // for example:
+           // if $candidate is "AND,", and pattern is "AND", then "AND," matches "AND"
            if ( strncasecmp($candidate, $this->pattern,strlen($this->pattern)) !== 0 ) {
                return false;
            }
-           // Return true if the lexeme is at the end of the
+
+           // Return true if the lexeme is at the end of the nb
             // input string or if the character following the
             // lexeme is not a letter or digit.
             //
